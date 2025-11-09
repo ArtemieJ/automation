@@ -1,0 +1,5 @@
+php-app/vendor/
+secrets/*
+!.gitkeep
+!secrets/jenkins_agent_ssh_key.pub
+.env
