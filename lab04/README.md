@@ -13,7 +13,7 @@ Pipeline-ul trebuie să descarce codul, să instaleze dependențele PHP și să 
 ## Efectuarea lucrării
 
 1. A fost creat directorul `lab04` și structura proiectului:
-lab04/
+`lab04/
 ├─ docker-compose.yml
 ├─ Dockerfile
 ├─ .env
@@ -27,7 +27,7 @@ lab04/
 ├─ tests/
 │ └─ AddTest.php
 └─ Jenkinsfile
-
+`
 2. A fost generată o pereche de chei SSH pentru conectarea agentului:
 ssh-keygen -t ed25519 -f lab04/secrets/jenkins_agent_ssh_key -C "jenkins@agent" -N ""
 3. A fost creat fișierul `.env` cu variabila:
