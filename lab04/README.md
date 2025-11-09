@@ -13,7 +13,8 @@ Pipeline-ul trebuie să descarce codul, să instaleze dependențele PHP și să 
 ## Efectuarea lucrării
 
 1. A fost creat directorul `lab04` și structura proiectului:
-`lab04/
+```
+lab04/
 ├─ docker-compose.yml
 ├─ Dockerfile
 ├─ .env
@@ -27,14 +28,14 @@ Pipeline-ul trebuie să descarce codul, să instaleze dependențele PHP și să 
 ├─ tests/
 │ └─ AddTest.php
 └─ Jenkinsfile
-`
-2. A fost generată o pereche de chei SSH pentru conectarea agentului:
+```
+3. A fost generată o pereche de chei SSH pentru conectarea agentului:
 ssh-keygen -t ed25519 -f lab04/secrets/jenkins_agent_ssh_key -C "jenkins@agent" -N ""
-3. A fost creat fișierul `.env` cu variabila:
+4. A fost creat fișierul `.env` cu variabila:
 JENKINS_AGENT_SSH_PUBKEY=ssh-ed25519 AAAAC3... jenkins@agent
 
 
-4. A fost pornit Jenkins Controller cu comanda:
+5. A fost pornit Jenkins Controller cu comanda:
 docker compose up -d --build
 
 Accesul s-a făcut la adresa: http://localhost:8080
@@ -63,9 +64,10 @@ A fost definit fișierul php-app/composer.json:
     "phpunit/phpunit": "^10.0"
   }
 }
+```
 A fost adăugat testul tests/AddTest.php:
 
-
+```
 <?php
 use PHPUnit\Framework\TestCase;
 
@@ -76,8 +78,9 @@ class AddTest extends TestCase {
         $this->assertEquals(5, 2 + 3);
     }
 }
+```
 A fost creat fișierul Jenkinsfile:
-
+```
 pipeline {
   agent { label 'php-agent' }
 
@@ -103,6 +106,7 @@ pipeline {
     failure { echo 'Errors detected in the pipeline.' }
   }
 }
+```
 A fost creat un job Jenkins de tip Pipeline from SCM, configurat cu:
 
 Repository: https://github.com/ArtemieJ/automation
@@ -116,14 +120,6 @@ După rularea pipeline-ului, rezultatul a fost:
 Hello! 2+3=5
 PHPUnit 10.5.58 by Sebastian Bergmann and contributors.
 OK (1 test, 1 assertion)
-Fișierul .gitignore:
-
-
-php-app/vendor/
-secrets/*
-!secrets/.gitkeep
-!secrets/jenkins_agent_ssh_key.pub
-.env
 
 Întrebări
 1. Care este rolul agentului SSH în Jenkins?
