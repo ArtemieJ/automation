@@ -4,7 +4,7 @@ pipeline {
   stages {
     stage('Install Dependencies') {
       steps {
-        dir('php-app') {
+        dir('lab04/php-app') {
           sh 'composer install --no-interaction --prefer-dist'
         }
       }
@@ -12,7 +12,7 @@ pipeline {
 
     stage('Test') {
       steps {
-        sh 'php-app/vendor/bin/phpunit --testdox'
+        sh 'lab04/php-app/vendor/bin/phpunit --testdox'
       }
     }
   }
