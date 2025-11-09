@@ -12,7 +12,7 @@ pipeline {
 
     stage('Test') {
       steps {
-        sh 'lab04/php-app/vendor/bin/phpunit --testdox'
+        sh 'lab04/php-app/vendor/bin/phpunit --testdox lab04/tests'
       }
     }
   }
