@@ -1,139 +1,263 @@
-# Lucrarea de laborator №4 – Jenkins CI/CD cu Agent SSH (PHP + PHPUnit)
+# Lucrarea de laborator 5  
+## Automatizare CI/CD cu Jenkins, Docker și Ansible (PHP Build, Test și Deploy)
 
-## Scopul lucrării
-Scopul lucrării este configurarea unui sistem de integrare continuă (CI) folosind Jenkins, unde build-urile și testele unei aplicații PHP sunt executate automat pe un agent SSH din Docker. Jenkins va descărca codul sursă dintr-un repository GitHub, va instala dependențele necesare și va rula testele unitare definite în proiect.
+---
 
-## Sarcina
-Configurarea unui mediu Jenkins cu două containere Docker:
-- **jenkins-controller** – containerul principal ce rulează serverul Jenkins.
-- **ssh-agent** – containerul secundar care execută taskurile prin SSH.
+## 1. Scopul lucrării
 
-Pipeline-ul trebuie să descarce codul, să instaleze dependențele PHP și să ruleze testele automat, afișând rezultatul în interfața Jenkins.
+Scopul lucrării este realizarea unui proces complet de CI/CD pentru o aplicație PHP utilizând:
 
-## Efectuarea lucrării
+- **Jenkins** pentru orchestrarea pipeline-urilor  
+- **Docker & Docker Compose** pentru infrastructură multi-container  
+- **Ansible** pentru configurarea automată a serverului și deploy  
 
-1. A fost creat directorul `lab04` și structura proiectului:
-lab04/
-├─ docker-compose.yml
-├─ Dockerfile
-├─ .env
-├─ secrets/
-│ ├─ jenkins_agent_ssh_key
-│ ├─ jenkins_agent_ssh_key.pub
-│ └─ .gitkeep
-├─ php-app/
-│ ├─ index.php
-│ └─ composer.json
-├─ tests/
-│ └─ AddTest.php
-└─ Jenkinsfile
+Rezultatul final:  
+Un pipeline complet care **build-uiește, testează și deploy-ază** aplicația PHP pe un server de test.
 
-2. A fost generată o pereche de chei SSH pentru conectarea agentului:
-ssh-keygen -t ed25519 -f lab04/secrets/jenkins_agent_ssh_key -C "jenkins@agent" -N ""
-3. A fost creat fișierul `.env` cu variabila:
-JENKINS_AGENT_SSH_PUBKEY=ssh-ed25519 AAAAC3... jenkins@agent
+---
 
+## 2. Arhitectura proiectului
 
-4. A fost pornit Jenkins Controller cu comanda:
-docker compose up -d --build
+Infrastructura este creată prin:
 
-Accesul s-a făcut la adresa: http://localhost:8080
+```
+lab05/compose.yaml
+```
 
-5. În interfața Jenkins s-au instalat pluginurile recomandate și s-a creat primul utilizator.
+Containerele pornite:
 
-6. În secțiunea **Manage Credentials** a fost adăugat un credential de tip “SSH Username with private key” cu ID-ul `jenkins-ssh-agent-key` și username-ul `jenkins`.
+| Serviciu             | Rol                                | Porturi            |
+|----------------------|-------------------------------------|---------------------|
+| jenkins-controller   | Server Jenkins                      | 8080, 50000         |
+| ssh-agent            | Agent Jenkins pentru build & test   | 2222                |
+| ansible-agent        | Agent Jenkins pentru Ansible        | 2223                |
+| test-server          | Server Apache pentru deploy         | 8081, 2224          |
 
-7. A fost creat un nod nou:
-- Nume: `ssh-agent1`
-- Root directory: `/home/jenkins/agent`
-- Launch method: SSH către `ssh-agent`
-- Credential: `jenkins-ssh-agent-key`
-- Label: `php-agent`
+---
 
-8. A fost creat fișierul `php-app/index.php`:
-```php
-<?php
-echo "Hello! 2+3=" . (2 + 3);
-A fost definit fișierul php-app/composer.json:
+## 3. Configurarea Jenkins Controller
 
+1. Pornirea serverului:
 
-{
-  "require": {},
-  "require-dev": {
-    "phpunit/phpunit": "^10.0"
-  }
-}
-A fost adăugat testul tests/AddTest.php:
+```bash
+docker compose up -d jenkins-controller
+```
 
+2. Acces Jenkins la:  
+**http://localhost:8080**
 
-<?php
-use PHPUnit\Framework\TestCase;
+3. Instalare plugin-uri:
+- Git
+- SSH Slaves / SSH Agent
+- Pipeline
+- Docker Pipeline
 
-require_once __DIR__ . '/../php-app/index.php';
+4. Crearea credențialelor SSH pentru:
+- ssh-agent
+- ansible-agent
+- ansible → test-server
 
-class AddTest extends TestCase {
-    public function testAddition() {
-        $this->assertEquals(5, 2 + 3);
-    }
-}
-A fost creat fișierul Jenkinsfile:
+5. Crearea a două noduri noi:
+- **ssh-agent** (pentru build & test)
+- **ansible-agent** (pentru rularea Ansible)
 
-pipeline {
-  agent { label 'php-agent' }
+---
 
-  stages {
-    stage('Install Dependencies') {
-      steps {
-        dir('lab04/php-app') {
-          sh 'composer install --no-interaction --prefer-dist'
-        }
-      }
-    }
+## 4. Agentul SSH (Build & Test)
 
-    stage('Test') {
-      steps {
-        sh 'lab04/php-app/vendor/bin/phpunit --testdox lab04/tests'
-      }
-    }
-  }
+Fișiere implicate:
 
-  post {
-    always { echo 'Pipeline completed.' }
-    success { echo 'All stages completed successfully!' }
-    failure { echo 'Errors detected in the pipeline.' }
-  }
-}
-A fost creat un job Jenkins de tip Pipeline from SCM, configurat cu:
+- `lab05/Dockerfile.ssh_agent`
+- `lab05/keys/jenkins_to_ssh.pub`
 
-Repository: https://github.com/ArtemieJ/automation
+Conține:
 
-Branch: lab01
+- Ubuntu 22.04
+- openssh-server
+- OpenJDK 17
+- PHP CLI + extensii
+- Git
+- Composer
+- PHPUnit
 
-Script path: lab04/Jenkinsfile
+Probleme rezolvate:
 
-După rularea pipeline-ului, rezultatul a fost:
+- Lipsa `/run/sshd` → creat la build  
+- Lipsa Java → instalat openjdk-17  
+- Configurare chei SSH pentru Jenkins  
 
-Hello! 2+3=5
-PHPUnit 10.5.58 by Sebastian Bergmann and contributors.
-OK (1 test, 1 assertion)
-Fișierul .gitignore:
+Acest agent rulează pipeline-ul de build și test.
 
+---
 
-php-app/vendor/
-secrets/*
-!secrets/.gitkeep
-!secrets/jenkins_agent_ssh_key.pub
-.env
+## 5. Agentul Ansible
 
-Întrebări
-1. Care este rolul agentului SSH în Jenkins?
-Agentul rulează build-urile și testele la distanță, separând execuția de serverul principal Jenkins.
+Fișiere:
 
-2. De ce este util un pipeline declarativ?
-Pentru că permite definirea clară și automată a etapelor de build și test direct în codul sursă, menținând proiectul complet automatizat.
+- `lab05/Dockerfile.ansible_agent`
+- `lab05/keys/ansible_to_test` (private)
+- `lab05/keys/ansible_to_test.pub` (public)
 
-3. Ce avantaje oferă Jenkins în automatizarea CI/CD?
-Permite rularea automată a testelor, buildurilor și deploy-urilor, gestionarea mai multor agenți și integrarea ușoară cu GitHub și Docker.
+Include:
 
-Concluzie
-În cadrul lucrării am configurat un sistem complet Jenkins CI/CD, format dintr-un controller și un agent SSH. S-au rulat automat etapele de instalare a dependențelor și testare pentru o aplicație PHP, iar pipeline-ul s-a finalizat cu succes. Am învățat să configurez Jenkins, să definesc un pipeline declarativ și să utilizez containere Docker pentru rularea automată a testelor.
+- Ansible
+- Python3
+- SSH server
+- OpenJDK 17
+
+Conexiune testată cu:
+
+```bash
+ssh -i /home/jenkins/.ssh/ansible_to_test ansible@test-server -o StrictHostKeyChecking=no
+```
+
+---
+
+## 6. Serverul de test (Apache + PHP)
+
+Fișier:
+
+- `lab05/Dockerfile.test_server`
+
+Include:
+
+- Apache2
+- PHP + extensii
+- SSH server
+- User `ansible` autorizat prin chei
+
+Porturi:
+
+- **8081** – acces aplicație PHP  
+- **2224** – SSH pentru deploy  
+
+---
+
+## 7. Ansible
+
+Folder: `lab05/ansible/`
+
+### 7.1 hosts.ini
+
+```ini
+[test_server]
+test-server ansible_user=ansible ansible_ssh_private_key_file=/home/jenkins/.ssh/ansible_to_test ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+```
+
+### 7.2 setup_test_server.yml
+
+Acțiuni:
+
+- instalare Apache + PHP
+- creare `/var/www/php-app`
+- configurare virtual host
+- restart Apache
+
+### 7.3 deploy_php.yml
+
+Acțiuni:
+
+- clonare repo
+- copiere aplicație în `/var/www/php-app/`
+- setare permisiuni `www-data`
+- restart Apache
+
+---
+
+## 8. Pipeline-urile Jenkins
+
+Sursa:  
+```
+lab05/pipelines/
+```
+
+### 8.1 Build & Test  
+Fișier: `php_build_and_test_pipeline.groovy`  
+Rulează pe **ssh-agent**
+
+Etape:
+1. Checkout cod
+2. Instalare dependențe Composer
+3. Rulare PHPUnit
+4. JUnit report
+
+---
+
+### 8.2 Setup Test Server  
+Fișier: `ansible_setup_pipeline.groovy`  
+Rulează pe **ansible-agent**
+
+Comandă:
+
+```bash
+ansible-playbook -i ansible/hosts.ini ansible/setup_test_server.yml
+```
+
+---
+
+### 8.3 Deploy PHP  
+Fișier: `php_deploy_pipeline.groovy`
+
+Comandă:
+
+```bash
+ansible-playbook -i ansible/hosts.ini ansible/deploy_php.yml
+```
+
+---
+
+## 9. Accesarea aplicației
+
+După execuția pipeline-urilor:
+
+1. php-build-and-test  
+2. ansible-setup-test-server  
+3. php-deploy-to-test-server  
+
+Aplicația este accesibilă la:
+
+👉 http://localhost:8081  
+👉 http://localhost:8081/index.php  
+
+---
+
+## 10. Probleme întâlnite și soluții
+
+### 1. Agenții Jenkins offline
+**Cauză:** lipsa OpenJDK sau /run/sshd  
+**Soluție:** instalare openjdk + mkdir /run/sshd + ssh-keygen -A
+
+### 2. Composer nu se instala global
+**Soluție:** instalare locală în workspace
+
+### 3. Ansible: Host key verification failed
+**Soluție:**  
+`ansible_ssh_common_args='-o StrictHostKeyChecking=no'`
+
+### 4. Apache dădea „Forbidden”
+**Soluție:**  
+`Require all granted` + permisiuni www-data
+
+### 5. Jenkins nu găsea pipeline-ul
+**Soluție:**  
+Corectarea branch-ului (automation) și căii fișierului.
+
+---
+
+## 11. Concluzie
+
+Laboratorul demonstrează integrarea completă CI/CD prin:
+
+- Jenkins (automatizare)
+- Docker (infrastructură locală)
+- Ansible (configurare server și deploy)
+
+Pipeline-ul final:
+
+✔ build și test automat PHP  
+✔ configurare completă server Apache  
+✔ deploy automat pe server de test  
+
+Este o implementare reală a unui flux DevOps profesional.
+
+---
