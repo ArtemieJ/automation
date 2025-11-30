@@ -1,0 +1,42 @@
+---
+  - name: Deploy PHP app to test server
+    hosts: test_server
+    become: yes
+  
+    vars:
+      web_root: /var/www/php-app
+      repo_url: "https://github.com/ArtemieJ/automation.git"
+      repo_path: "/tmp/php-app-src"
+      repo_branch: "automation"
+  
+    tasks:
+      - name: Ensure git is installed
+        apt:
+          name: git
+          state: present
+          update_cache: yes
+  
+      - name: Clone repo on test server
+        git:
+          repo: "{{ repo_url }}"
+          dest: "{{ repo_path }}"
+          version: "{{ repo_branch }}"
+          force: yes
+  
+      - name: Ensure web root exists
+        file:
+          path: "{{ web_root }}"
+          state: directory
+          owner: www-data
+          group: www-data
+          mode: "0755"
+  
+      - name: Copy php-app to web root
+        copy:
+          src: "{{ repo_path }}/lab05/php-app/"
+          dest: "{{ web_root }}/"
+          owner: www-data
+          group: www-data
+          mode: "0644"
+          remote_src: yes
+  
