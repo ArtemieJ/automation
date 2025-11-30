@@ -16,6 +16,7 @@ RUN apt-get update && \
         git \
         unzip \
         composer \
+        openjdk-17-jre-headless \
     && rm -rf /var/lib/apt/lists/*
 
 # User pentru Jenkins
@@ -32,6 +33,8 @@ RUN chown -R jenkins:jenkins /home/jenkins/.ssh && \
 RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && \
     sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
     echo "AllowUsers jenkins" >> /etc/ssh/sshd_config
+    
+RUN mkdir -p /run/sshd && chmod 755 /run/sshd && ssh-keygen -A
 
 EXPOSE 22
 
