@@ -9,7 +9,7 @@ pipeline {
         stage('Checkout PHP project') {
             steps {
                 git branch: 'automation',
-                    url: 'https://github.com/ArtemieJ/automation.git'
+                    url: 'https://github.com/ArtemieJ/automation/tree/automation'
             }
         }
 
