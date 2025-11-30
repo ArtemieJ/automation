@@ -2,17 +2,21 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y \
-    openssh-server \
-    php-cli \
-    php-xml \
-    php-mbstring \
-    php-curl \
-    git \
-    unzip \
-    curl \
-    openjdk-17-jre-headless \
-    && mkdir -p /var/run/sshd
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+
+RUN apt-get update && \
+    apt-get install -y \
+        tzdata \
+        openssh-server \
+        php-cli \
+        php-xml \
+        php-mbstring \
+        git \
+        unzip \
+        composer \
+    && rm -rf /var/lib/apt/lists/*
 
 # User pentru Jenkins
 RUN useradd -ms /bin/bash jenkins

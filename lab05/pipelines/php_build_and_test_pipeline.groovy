@@ -14,21 +14,13 @@ pipeline {
         }
 
         stage('Install dependencies with Composer') {
-            steps {
-                dir('lab05/php-app') {
-                    sh '''
-                        if ! command -v composer >/dev/null 2>&1; then
-                          echo "Composer not found, installing locally..."
-                          php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-                          php composer-setup.php --install-dir=/usr/local/bin --filename=composer
-                          rm composer-setup.php
-                        fi
-
-                        composer install
-                    '''
-                }
-            }
+    steps {
+        dir('lab05/php-app') {
+            sh 'composer install'
         }
+    }
+}
+
 
         stage('Run PHPUnit tests') {
             steps {
