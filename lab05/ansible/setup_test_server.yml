@@ -1,85 +1,81 @@
 ---
-    - name: Setup PHP test server
-      hosts: test_server
-      become: yes
-    
-      vars:
-        web_root: /var/www/php-app
-        server_name: php-test.local
-    
-      tasks:
-        - name: Update apt cache
-          apt:
-            update_cache: yes
-    
-        - name: Install Apache and PHP
-          apt:
-            name:
-              - apache2
-              - libapache2-mod-php
-              - php
-              - php-xml
-              - php-mbstring
-              - php-curl
-              - php-mysql
-            state: present
-    
-        - name: Enable Apache rewrite module
-          apache2_module:
-            name: rewrite
-            state: present
-    
-        - name: Create web root directory
-          file:
-            path: "{{ web_root }}"
-            state: directory
-            owner: www-data
-            group: www-data
-            mode: "0755"
-    
-        - name: Create simple index.php
-          copy:
-            dest: "{{ web_root }}/index.php"
-            content: |
-              <?php
-              phpinfo();
-            owner: www-data
-            group: www-data
-            mode: "0644"
-    
-        - name: Create Apache vhost for PHP app
-          copy:
-            dest: /etc/apache2/sites-available/php-app.conf
-            content: |
-              <VirtualHost *:80>
-                  ServerName {{ server_name }}
-                  DocumentRoot {{ web_root }}
-    
-                  <Directory {{ web_root }}>
-                      AllowOverride All
-                      Require all granted
-                  </Directory>
-    
-                  ErrorLog ${APACHE_LOG_DIR}/php-app_error.log
-                  CustomLog ${APACHE_LOG_DIR}/php-app_access.log combined
-              </VirtualHost>
-          notify: Reload Apache
-    
-        - name: Disable default site
-          file:
-            path: /etc/apache2/sites-enabled/000-default.conf
-            state: absent
-    
-        - name: Enable php-app site
-          file:
-            src: /etc/apache2/sites-available/php-app.conf
-            dest: /etc/apache2/sites-enabled/php-app.conf
-            state: link
-          notify: Reload Apache
-    
-      handlers:
-        - name: Reload Apache
-          service:
-            name: apache2
-            state: restarted
-    
+  - name: Setup test server with Apache and PHP
+    hosts: test_server
+    become: yes
+  
+    vars:
+      web_root: /var/www/php-app
+  
+    tasks:
+      - name: Update APT cache
+        apt:
+          update_cache: yes
+  
+      - name: Install Apache and PHP
+        apt:
+          name:
+            - apache2
+            - libapache2-mod-php
+            - php
+            - php-cli
+            - php-xml
+            - php-mbstring
+          state: present
+  
+      - name: Ensure web root directory exists
+        file:
+          path: "{{ web_root }}"
+          state: directory
+          owner: www-data
+          group: www-data
+          mode: "0755"
+  
+      - name: Create Apache vhost for PHP app
+        copy:
+          dest: /etc/apache2/sites-available/php-app.conf
+          content: |
+            <VirtualHost *:80>
+                ServerAdmin webmaster@localhost
+                DocumentRoot {{ web_root }}
+  
+                <Directory {{ web_root }}>
+                    AllowOverride All
+                    Require all granted
+                </Directory>
+  
+                DirectoryIndex index.php index.html
+  
+                ErrorLog ${APACHE_LOG_DIR}/php_app_error.log
+                CustomLog ${APACHE_LOG_DIR}/php_app_access.log combined
+            </VirtualHost>
+        notify: Reload Apache
+  
+      - name: Disable default Apache site
+        command: a2dissite 000-default.conf
+        args:
+          warn: false
+        register: disable_default
+        changed_when: "'Site 000-default disabled' in disable_default.stdout"
+  
+      - name: Enable php-app site
+        command: a2ensite php-app.conf
+        args:
+          warn: false
+        register: enable_php_app
+        changed_when: "'Enabling site php-app' in enable_php_app.stdout"
+        notify: Reload Apache
+  
+      - name: Enable Apache rewrite module (optional)
+        command: a2enmod rewrite
+        args:
+          warn: false
+        register: enable_rewrite
+        changed_when: "'Enabling module rewrite' in enable_rewrite.stdout"
+        notify: Reload Apache
+  
+    handlers:
+      - name: Reload Apache
+        service:
+          name: apache2
+          state: restarted
+  
