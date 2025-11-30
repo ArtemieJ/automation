@@ -1,0 +1,85 @@
+---
+    - name: Setup PHP test server
+      hosts: test_server
+      become: yes
+    
+      vars:
+        web_root: /var/www/php-app
+        server_name: php-test.local
+    
+      tasks:
+        - name: Update apt cache
+          apt:
+            update_cache: yes
+    
+        - name: Install Apache and PHP
+          apt:
+            name:
+              - apache2
+              - libapache2-mod-php
+              - php
+              - php-xml
+              - php-mbstring
+              - php-curl
+              - php-mysql
+            state: present
+    
+        - name: Enable Apache rewrite module
+          apache2_module:
+            name: rewrite
+            state: present
+    
+        - name: Create web root directory
+          file:
+            path: "{{ web_root }}"
+            state: directory
+            owner: www-data
+            group: www-data
+            mode: "0755"
+    
+        - name: Create simple index.php
+          copy:
+            dest: "{{ web_root }}/index.php"
+            content: |
+              <?php
+              phpinfo();
+            owner: www-data
+            group: www-data
+            mode: "0644"
+    
+        - name: Create Apache vhost for PHP app
+          copy:
+            dest: /etc/apache2/sites-available/php-app.conf
+            content: |
+              <VirtualHost *:80>
+                  ServerName {{ server_name }}
+                  DocumentRoot {{ web_root }}
+    
+                  <Directory {{ web_root }}>
+                      AllowOverride All
+                      Require all granted
+                  </Directory>
+    
+                  ErrorLog ${APACHE_LOG_DIR}/php-app_error.log
+                  CustomLog ${APACHE_LOG_DIR}/php-app_access.log combined
+              </VirtualHost>
+          notify: Reload Apache
+    
+        - name: Disable default site
+          file:
+            path: /etc/apache2/sites-enabled/000-default.conf
+            state: absent
+    
+        - name: Enable php-app site
+          file:
+            src: /etc/apache2/sites-available/php-app.conf
+            dest: /etc/apache2/sites-enabled/php-app.conf
+            state: link
+          notify: Reload Apache
+    
+      handlers:
+        - name: Reload Apache
+          service:
+            name: apache2
+            state: restarted
+    

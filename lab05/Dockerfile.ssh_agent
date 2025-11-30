@@ -1,0 +1,34 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    openssh-server \
+    php-cli \
+    php-xml \
+    php-mbstring \
+    php-curl \
+    git \
+    unzip \
+    curl \
+    openjdk-17-jre-headless \
+    && mkdir -p /var/run/sshd
+
+# User pentru Jenkins
+RUN useradd -ms /bin/bash jenkins
+
+# Copiem cheia publică cu care Jenkins se va conecta la acest container
+COPY keys/jenkins_to_ssh_agent.pub /home/jenkins/.ssh/authorized_keys
+
+RUN chown -R jenkins:jenkins /home/jenkins/.ssh && \
+    chmod 700 /home/jenkins/.ssh && \
+    chmod 600 /home/jenkins/.ssh/authorized_keys
+
+# Configurăm sshd să permită doar key auth
+RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && \
+    sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
+    echo "AllowUsers jenkins" >> /etc/ssh/sshd_config
+
+EXPOSE 22
+
+CMD ["/usr/sbin/sshd", "-D"]
