@@ -1,0 +1,25 @@
+pipeline {
+  agent { label 'php-agent' }
+
+  stages {
+    stage('Install Dependencies') {
+      steps {
+        dir('lab04/php-app') {
+          sh 'composer install --no-interaction --prefer-dist'
+        }
+      }
+    }
+
+    stage('Test') {
+      steps {
+        sh 'lab04/php-app/vendor/bin/phpunit --testdox lab04/tests'
+      }
+    }
+  }
+
+  post {
+    always { echo 'Pipeline completed.' }
+    success { echo 'All stages completed successfully!' }
+    failure { echo 'Errors detected in the pipeline.' }
+  }
+}
