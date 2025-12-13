@@ -1,0 +1,8 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Daily at 06:00 - MDL -> EUR for previous day
+0 6 * * * root python /app/currency_exchange_rate.py MDL EUR $(date -d "yesterday" +\%Y-\%m-\%d) >> /var/log/cron.log 2>&1
+
+# Weekly on Friday at 17:00 - MDL -> USD for 7 days ago
+0 17 * * 5 root python /app/currency_exchange_rate.py MDL USD $(date -d "7 days ago" +\%Y-\%m-\%d) >> /var/log/cron.log 2>&1

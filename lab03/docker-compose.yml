@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  lab03-cron:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lab03_currency_cron
+    environment:
+      # cheia API – trebuie să fie aceeași ca în lab02prep/.env
+      - API_KEY=EXAMPLE_API_KEY
+      # URL-ul spre API-ul de schimb valutar (rulează în lab02prep pe portul 8080)
+      - CURRENCY_API_URL=http://host.docker.internal:8080/
