@@ -49,7 +49,7 @@ Fereastra cu `docker-compose up` trebuie lăsată deschisă.
 ## 4. Cum construiesc și pornesc containerul cu cron (lab03)
 
 Din directorul lab03:
-``
+```
 cd lab03
 docker-compose up --build
 ```
